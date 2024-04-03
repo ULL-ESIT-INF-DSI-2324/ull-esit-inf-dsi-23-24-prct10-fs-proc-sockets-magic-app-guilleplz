@@ -33,6 +33,10 @@
     - [Tipos de node](#tipos-de-node)
   - [Uso de módulos ESM](#uso-de-módulos-esm)
   - [GitHub Actions](#github-actions)
+    - [Node.js workflow](#nodejs-workflow)
+    - [Coveralls](#coveralls)
+    - [SonarCloud](#sonarcloud)
+- [Programa](#programa)
 
 ---
 
@@ -250,4 +254,110 @@ Para usar los módulos ESM con typescript deberemos cambiar algunas cosas en los
 
 GitHub Actions permite automatizar tareas dentro de un flujo de trabajo en un repositorio de GitHub. Esto incluye la ejecución de pruebas, la implementación continua, la generación de documentación y otras acciones personalizadas. En resumen, GitHub Actions automatiza procesos dentro del ciclo de vida del desarrollo de software para mejorar la eficiencia y la calidad del proyecto
 
+### Node.js workflow
 
+Instalaremos el **workflow de node.js** para que haga las pruebas de forma automática cada vez que empujemos los cambios a github. Para lograr esto deberemos crear el fichero **node.js.yml** en la carpeta **.github/workflows/**. El contenido del fichero será el siguiente:
+
+``` yml
+
+name: tests
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [16.x, 18.x, 19.x, 20.x, 21.x]
+        # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+    - run: npm install
+    - run: npm test
+```
+
+De esta forma, cada vez que empujemos nuevos cambios al repositorio, se ejecutarán los tests en distintas versiones de node para comprobar que todo irá de forma correcta.
+
+### Coveralls
+
+Instalaremos el **workflow de coveralls** para que genere un informe de cobertura de forma automática y lo envíe a la web coveralls cada vez que empujemos cambios al repositorio de github. Deberemos crear el fichero **coveralls.yml** dentro del directorio ya creado **.github/workflows**, que contendrá la siguiente información:
+
+``` yml
+
+name: Coveralls
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Cloning repo
+      uses: actions/checkout@v4
+    - name: Use Node.js 21.x
+      uses: actions/setup-node@v4
+      with:
+        node-version: 21.x
+    - name: Installing dependencies
+      run: npm ci
+    - name: Generating coverage information
+      run: npm run coverage
+    - name: Coveralls GitHub Action
+      uses: coverallsapp/github-action@v2.2.3
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+```
+
+De esta forma cada vez que empujemos cambios al repositorio, se realizará un informe de cubrimiento en la versión 21.x de node y lo enviará a la web de coveralls de forma automática
+
+### SonarCloud
+
+Usaremos el workflow de SonarCloud para detectar problemas de calidad y seguridad en el código fuente de proyectos de software. Proporciona información detallada sobre vulnerabilidades, errores, deudas técnicas y código duplicado, entre otros aspectos. Además, ofrece métricas y estadísticas para evaluar la salud general del código y facilita la identificación de áreas que requieren atención.
+
+Para ponerlo en marcha iremos a la web de SonarCloud y añadiremos el repositorio. Después, seguimos los pasos para crear los ficheros de configuración que nos proporcionan en la página.
+
+El fichero sonarcloud.yml quedaría de la siguiente manera:
+
+``` yml
+name: Build
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types: [opened, synchronize, reopened]
+jobs:
+  sonarcloud:
+    name: SonarCloud
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+```
+
+# Programa
