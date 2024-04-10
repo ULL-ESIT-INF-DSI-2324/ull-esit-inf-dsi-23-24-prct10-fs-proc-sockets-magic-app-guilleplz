@@ -4,7 +4,8 @@
     "dist",
     "test",
     "coverage",
-    "package-lock.json"
+    "package-lock.json",
+    "cartas"
   ],
   "compilerOptions": {
     "target": "es2022",                                  
